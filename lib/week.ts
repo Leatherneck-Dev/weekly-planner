@@ -108,17 +108,24 @@ export function getDominantYearMonth(weekStart: string): { year: number; month: 
   return dominantMonth(parseDate(weekStart));
 }
 
-// All week-start Mondays (chronological order) that dominantly belong to `year`/`month` (1-12).
+// A week belongs to a month if most of its days fall there (dominant month), or if the
+// week itself starts there — so a week straddling month-end (like Mon-started-in-September
+// but mostly October) still shows up under the month it starts in, not just the one it
+// mostly falls in. A boundary week can therefore appear in two adjacent months' lists.
+function weekBelongsToMonth(monday: Date, year: number, month: number): boolean {
+  const dominant = dominantMonth(monday);
+  if (dominant.year === year && dominant.month === month) return true;
+  return monday.getFullYear() === year && monday.getMonth() + 1 === month;
+}
+
+// All week-start Mondays (chronological order) that belong to `year`/`month` (1-12).
 // A week's 1-based index in this list is that week's "N주차".
 export function weeksInMonth(year: number, month: number): string[] {
   const cursor = getMonday(new Date(year, month - 1, 1));
-  cursor.setDate(cursor.getDate() - 7); // start a week early to catch the month's first week
+  cursor.setDate(cursor.getDate() - 7); // catch a leading week that dominantly belongs here
   const weeks: string[] = [];
-  for (let i = 0; i < 7; i++) {
-    const dominant = dominantMonth(cursor);
-    if (dominant.year === year && dominant.month === month) {
-      weeks.push(formatDate(cursor));
-    }
+  for (let i = 0; i < 9; i++) {
+    if (weekBelongsToMonth(cursor, year, month)) weeks.push(formatDate(cursor));
     cursor.setDate(cursor.getDate() + 7);
   }
   return weeks;
