@@ -55,13 +55,22 @@ function defaultDays(): DaySchedule[] {
   }));
 }
 
-// Vercel's Upstash Redis integration injects KV_REST_API_URL/TOKEN; the
-// @upstash/redis package's own env vars are UPSTASH_REDIS_REST_URL/TOKEN.
-// Checking both means it works whether the project was wired up through the
-// Vercel Marketplace or by pointing at Upstash directly.
-const REDIS_URL = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
-const redis = REDIS_URL && REDIS_TOKEN ? new Redis({ url: REDIS_URL, token: REDIS_TOKEN }) : null;
+// The Vercel Marketplace integration lets you pick a custom env var prefix
+// when connecting Upstash to a project (e.g. "STORAGE_KV_REST_API_URL"
+// instead of the plain "KV_REST_API_URL"), so rather than hardcoding one
+// name, scan for any *_REST_API_URL / *_REST_API_TOKEN pair and use it.
+function findRedisCredentials(): { url: string; token: string } | null {
+  const urlKey = Object.keys(process.env).find((k) => k.endsWith("REST_API_URL"));
+  if (!urlKey) return null;
+  const prefix = urlKey.slice(0, -"REST_API_URL".length);
+  const tokenKey = `${prefix}REST_API_TOKEN`;
+  const url = process.env[urlKey];
+  const token = process.env[tokenKey];
+  return url && token ? { url, token } : null;
+}
+
+const redisCredentials = findRedisCredentials();
+const redis = redisCredentials ? new Redis(redisCredentials) : null;
 
 // Redis in production (persists across deploys/instances); local JSON files
 // in dev, so `npm run dev` needs no cloud account. Each "blob" is one key/file
