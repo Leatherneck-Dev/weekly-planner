@@ -13,6 +13,8 @@ export default function Home() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [title, setTitle] = useState("");
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
 
   useEffect(() => {
     async function fetchTodos() {
@@ -53,6 +55,36 @@ export default function Home() {
   async function deleteTodo(id: number) {
     setTodos((prev) => prev.filter((t) => t.id !== id));
     await fetch(`/api/todos/${id}`, { method: "DELETE" });
+  }
+
+  function startEditing(todo: Todo) {
+    setEditingId(todo.id);
+    setEditingTitle(todo.title);
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+    setEditingTitle("");
+  }
+
+  async function saveEditing(id: number) {
+    const trimmed = editingTitle.trim();
+    if (!trimmed) {
+      cancelEditing();
+      return;
+    }
+
+    setTodos((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, title: trimmed } : t))
+    );
+    setEditingId(null);
+    setEditingTitle("");
+
+    await fetch(`/api/todos/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: trimmed }),
+    });
   }
 
   const remaining = todos.filter((t) => !t.done).length;
@@ -98,15 +130,37 @@ export default function Home() {
                     onChange={() => toggleTodo(todo)}
                     className="h-4 w-4 shrink-0"
                   />
-                  <span
-                    className={`flex-1 text-sm ${
-                      todo.done
-                        ? "text-zinc-400 line-through"
-                        : "text-black dark:text-zinc-50"
-                    }`}
+                  {editingId === todo.id ? (
+                    <input
+                      type="text"
+                      autoFocus
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onBlur={() => saveEditing(todo.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveEditing(todo.id);
+                        if (e.key === "Escape") cancelEditing();
+                      }}
+                      className="flex-1 rounded border border-zinc-300 bg-white px-2 py-1 text-sm text-black outline-none focus:border-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+                    />
+                  ) : (
+                    <span
+                      onDoubleClick={() => startEditing(todo)}
+                      className={`flex-1 text-sm ${
+                        todo.done
+                          ? "text-zinc-400 line-through"
+                          : "text-black dark:text-zinc-50"
+                      }`}
+                    >
+                      {todo.title}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => startEditing(todo)}
+                    className="text-xs text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200"
                   >
-                    {todo.title}
-                  </span>
+                    수정
+                  </button>
                   <button
                     onClick={() => deleteTodo(todo.id)}
                     className="text-xs text-zinc-400 hover:text-red-500"

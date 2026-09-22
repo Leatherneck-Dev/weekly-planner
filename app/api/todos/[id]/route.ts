@@ -7,7 +7,19 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const { id } = await params;
   const body = await request.json();
 
-  const todo = await updateTodo(Number(id), Boolean(body.done));
+  const updates: { title?: string; done?: boolean } = {};
+  if (typeof body.title === "string") {
+    const trimmed = body.title.trim();
+    if (!trimmed) {
+      return NextResponse.json({ error: "title cannot be empty" }, { status: 400 });
+    }
+    updates.title = trimmed;
+  }
+  if (typeof body.done === "boolean") {
+    updates.done = body.done;
+  }
+
+  const todo = await updateTodo(Number(id), updates);
   if (!todo) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }

@@ -52,12 +52,13 @@ export async function addTodo(title: string): Promise<Todo> {
 
 export async function updateTodo(
   id: number,
-  done: boolean
+  updates: { title?: string; done?: boolean }
 ): Promise<Todo | null> {
   const todos = await readTodos();
   const todo = todos.find((t) => t.id === id);
   if (!todo) return null;
-  todo.done = done;
+  if (updates.title !== undefined) todo.title = updates.title;
+  if (updates.done !== undefined) todo.done = updates.done;
   await writeTodos(todos);
   return todo;
 }
