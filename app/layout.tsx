@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "할 일 관리",
-  description: "간단한 할 일 관리 앱",
+  title: "주간 플래너",
+  description: "카테고리별 할 일을 요일에 배치하는 주간 플래너",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
